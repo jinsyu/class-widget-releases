@@ -1,0 +1,44 @@
+# 4학년 바탕화면 위젯 Windows 빌드·릴리스.
+# 소스는 비공개 저장소(jinsyu/jinsyu-reserv_tablet_4th)의 desktop/ 이고, 공개 저장소의 무료 러너로 빌드만 여기서 한다.
+# 실행: gh workflow run release.yml -R jinsyu/grade4-widget-releases -f ref=widget-v<버전>
+# 설치된 앱은 이 저장소 최신 릴리스의 latest.json 을 보고 스스로 업데이트한다.
+# 필요한 secrets: SOURCE_TOKEN(비공개 저장소 읽기), TAURI_SIGNING_PRIVATE_KEY(업데이트 서명 키)
+name: release
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "비공개 저장소의 태그·브랜치 (예: widget-v0.1.1)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: jinsyu/jinsyu-reserv_tablet_4th
+          ref: ${{ inputs.ref }}
+          token: ${{ secrets.SOURCE_TOKEN }}
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: desktop
+      - uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        with:
+          projectPath: desktop
+          tauriScript: npx -y @tauri-apps/cli@2
+          owner: jinsyu
+          repo: grade4-widget-releases
+          tagName: widget-v__VERSION__
+          releaseName: "4학년 위젯 v__VERSION__"
+          releaseBody: "Windows: *-setup.exe 를 내려받아 설치하세요. 설치된 앱은 자동으로 업데이트됩니다."
+          releaseDraft: false
+          includeUpdaterJson: true
